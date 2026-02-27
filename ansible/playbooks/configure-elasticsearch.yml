@@ -1,0 +1,132 @@
+---
+# Ansible Playbook: Configure Elasticsearch Index
+# Usage: ansible-playbook -i inventory/local.yml playbooks/configure-elasticsearch.yml
+#
+# This playbook handles:
+#   - Creating/updating the products index mapping
+#   - Uploading synonyms
+#   - Configuring index settings
+#   - Index lifecycle management
+
+- name: Configure Elasticsearch for Product Search
+  hosts: localhost
+  gather_facts: false
+  vars:
+    es_host: "{{ lookup('env', 'ES_HOST') | default('http://localhost:9200') }}"
+    es_user: "{{ lookup('env', 'ES_USER') | default('elastic') }}"
+    es_password: "{{ lookup('env', 'ES_PASSWORD') | default('changeme') }}"
+    index_name: "products"
+    index_alias: "products_read"
+    write_alias: "products_write"
+
+  tasks:
+
+    - name: Wait for Elasticsearch to be healthy
+      uri:
+        url: "{{ es_host }}/_cluster/health"
+        method: GET
+        user: "{{ es_user }}"
+        password: "{{ es_password }}"
+        force_basic_auth: true
+        status_code: 200
+      register: health_check
+      until: health_check.json.status in ['green', 'yellow']
+      retries: 30
+      delay: 10
+
+    - name: Show cluster health
+      debug:
+        msg: "Cluster status: {{ health_check.json.status }}, nodes: {{ health_check.json.number_of_nodes }}"
+
+    - name: Check if products index exists
+      uri:
+        url: "{{ es_host }}/{{ index_name }}"
+        method: HEAD
+        user: "{{ es_user }}"
+        password: "{{ es_password }}"
+        force_basic_auth: true
+        status_code: [200, 404]
+      register: index_check
+
+    - name: Create products index with mapping
+      uri:
+        url: "{{ es_host }}/{{ index_name }}"
+        method: PUT
+        user: "{{ es_user }}"
+        password: "{{ es_password }}"
+        force_basic_auth: true
+        body_format: json
+        body: "{{ lookup('file', '../elasticsearch/index-mapping.json') | from_json }}"
+        status_code: 200
+      when: index_check.status == 404
+      register: create_result
+
+    - name: Show index creation result
+      debug:
+        msg: "Index created: {{ create_result.json.acknowledged }}"
+      when: index_check.status == 404
+
+    - name: Update index mapping (if index already exists)
+      uri:
+        url: "{{ es_host }}/{{ index_name }}/_mapping"
+        method: PUT
+        user: "{{ es_user }}"
+        password: "{{ es_password }}"
+        force_basic_auth: true
+        body_format: json
+        body: "{{ (lookup('file', '../elasticsearch/index-mapping.json') | from_json).mappings }}"
+        status_code: 200
+      when: index_check.status == 200
+      ignore_errors: true
+
+    - name: Create read alias
+      uri:
+        url: "{{ es_host }}/_aliases"
+        method: POST
+        user: "{{ es_user }}"
+        password: "{{ es_password }}"
+        force_basic_auth: true
+        body_format: json
+        body:
+          actions:
+            - add:
+                index: "{{ index_name }}"
+                alias: "{{ index_alias }}"
+                is_write_index: false
+            - add:
+                index: "{{ index_name }}"
+                alias: "{{ write_alias }}"
+                is_write_index: true
+        status_code: 200
+      ignore_errors: true
+
+    - name: Configure index settings (live update)
+      uri:
+        url: "{{ es_host }}/{{ index_name }}/_settings"
+        method: PUT
+        user: "{{ es_user }}"
+        password: "{{ es_password }}"
+        force_basic_auth: true
+        body_format: json
+        body:
+          index:
+            refresh_interval: "5s"
+            number_of_replicas: 1
+        status_code: 200
+
+    - name: Verify index stats
+      uri:
+        url: "{{ es_host }}/{{ index_name }}/_stats"
+        method: GET
+        user: "{{ es_user }}"
+        password: "{{ es_password }}"
+        force_basic_auth: true
+        status_code: 200
+      register: index_stats
+
+    - name: Show index stats
+      debug:
+        msg: >
+          Index: {{ index_name }}
+          Docs: {{ index_stats.json._all.total.docs.count }}
+          Size: {{ index_stats.json._all.total.store.size_in_bytes | int // 1024 // 1024 }}MB

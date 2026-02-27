@@ -1,0 +1,44 @@
+# Electronics
+tv, television, telly
+laptop, notebook, netbook
+mobile, phone, smartphone, cell phone, cellphone
+headphone, headset, earphone, earbuds
+camera, cam, dslr
+tablet, ipad, slate
+monitor, display, screen
+keyboard, keypad
+mouse, pointer, trackpad
+speaker, soundbar, subwoofer
+charger, adapter, power supply
+cable, cord, wire
+router, modem, gateway
+printer, scanner, copier
+
+# Clothing
+shirt, tee, t-shirt, top
+pants, trousers, jeans, slacks
+shoes, footwear, sneakers, trainers
+jacket, coat, blazer, hoodie
+dress, gown, frock
+bag, purse, handbag, tote
+
+# Home
+sofa, couch, settee
+fridge, refrigerator, freezer
+washer, washing machine, laundry machine
+vacuum, hoover, vacuum cleaner
+bed, bedframe, cot
+mattress, bed mattress, sleeping mattress
+lamp, light, bulb, luminaire
+
+# Sports & Outdoors
+bicycle, bike, cycle
+tent, camping tent, shelter
+dumbbell, weight, barbell
+treadmill, running machine
+
+# Beauty
+lipstick, lip color, lip colour
+moisturizer, moisturiser, lotion, cream
+perfume, fragrance, cologne, scent
+shampoo, hair wash, hair cleanser
