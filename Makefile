@@ -99,3 +99,31 @@ clean: ## Remove volumes and stop everything
 
 reset: clean up ## Full reset (destroys all ES data!)
 	@echo "WARNING: All Elasticsearch data has been deleted"
+
+# ── Kubernetes ────────────────────────────────────────────────────────────────
+
+cluster-create:
+	kind create cluster --config k8s-configs/kind/cluster.yaml
+
+cluster-delete:
+	kind delete cluster
+
+ingress-install:
+	kubectl apply -f k8s-configs/ingress/nginx-ingress-controller.yaml
+	kubectl wait --namespace ingress-nginx \
+	  --for=condition=ready pod \
+	  --selector=app.kubernetes.io/component=controller \
+	  --timeout=90s
+
+ingress-apply:
+	kubectl apply -f k8s-configs/ingress/search-ingress.yaml
+
+apps-deploy:
+	kubectl apply -f k8s-configs/apps/
+
+cluster-bootstrap: cluster-create ingress-install ingress-apply apps-deploy
+	@echo "Cluster ready."
+
+load-images:
+	kind load docker-image search-api:latest
+	kind load docker-image search-ui:latest
