@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: search-ui
-  tag: latest
+  tag: fcad8ed
   pullPolicy: IfNotPresent
 
 service:
