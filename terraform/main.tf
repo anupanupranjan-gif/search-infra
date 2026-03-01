@@ -21,12 +21,14 @@ terraform {
 provider "kind" {}
 
 provider "kubernetes" {
-  config_path = kind_cluster.search_cluster.kubeconfig_path
+  config_path    = "~/.kube/config"
+  config_context = "kind-kind"
 }
 
 provider "helm" {
   kubernetes {
-    config_path = kind_cluster.search_cluster.kubeconfig_path
+    config_path    = "~/.kube/config"
+    config_context = "kind-kind"
   }
 }
 
@@ -35,25 +37,26 @@ provider "helm" {
 variable "cluster_name" {
   description = "Name of the kind cluster"
   type        = string
-  default     = "search-cluster"
-}
-
-variable "es_namespace" {
-  description = "Kubernetes namespace for Elasticsearch"
-  type        = string
-  default     = "elasticsearch"
-}
-
-variable "app_namespace" {
-  description = "Kubernetes namespace for application services"
-  type        = string
-  default     = "search-app"
+  default     = "kind"
 }
 
 variable "monitoring_namespace" {
   description = "Kubernetes namespace for monitoring stack"
   type        = string
   default     = "monitoring"
+}
+
+variable "es_host" {
+  description = "Elasticsearch host IP reachable from Kind network"
+  type        = string
+  default     = "172.18.0.1"
+}
+
+variable "es_password" {
+  description = "Elasticsearch password"
+  type        = string
+  default     = "changeme"
+  sensitive   = true
 }
 
 # ── Kind Cluster ──────────────────────────────────────────────────────────────
@@ -66,7 +69,6 @@ resource "kind_cluster" "search_cluster" {
     kind        = "Cluster"
     api_version = "kind.x-k8s.io/v1alpha4"
 
-    # 1 control plane + 3 worker nodes
     node {
       role = "control-plane"
       kubeadm_config_patches = [
@@ -88,62 +90,10 @@ resource "kind_cluster" "search_cluster" {
         protocol       = "TCP"
       }
     }
-
-    # Worker node 1 - Elasticsearch
-    node {
-      role = "worker"
-      labels = {
-        workload = "elasticsearch"
-      }
-      extra_mounts {
-        host_path      = "/tmp/es-data-01"
-        container_path = "/var/local-path-provisioner"
-      }
-    }
-
-    # Worker node 2 - Elasticsearch
-    node {
-      role = "worker"
-      labels = {
-        workload = "elasticsearch"
-      }
-      extra_mounts {
-        host_path      = "/tmp/es-data-02"
-        container_path = "/var/local-path-provisioner"
-      }
-    }
-
-    # Worker node 3 - Application workloads
-    node {
-      role = "worker"
-      labels = {
-        workload = "application"
-      }
-    }
   }
 }
 
 # ── Namespaces ────────────────────────────────────────────────────────────────
-
-resource "kubernetes_namespace" "elasticsearch" {
-  metadata {
-    name = var.es_namespace
-    labels = {
-      name = var.es_namespace
-    }
-  }
-  depends_on = [kind_cluster.search_cluster]
-}
-
-resource "kubernetes_namespace" "search_app" {
-  metadata {
-    name = var.app_namespace
-    labels = {
-      name = var.app_namespace
-    }
-  }
-  depends_on = [kind_cluster.search_cluster]
-}
 
 resource "kubernetes_namespace" "monitoring" {
   metadata {
@@ -155,36 +105,7 @@ resource "kubernetes_namespace" "monitoring" {
   depends_on = [kind_cluster.search_cluster]
 }
 
-# ── Elasticsearch via Helm (ECK Operator) ─────────────────────────────────────
-
-resource "helm_release" "eck_operator" {
-  name             = "elastic-operator"
-  repository       = "https://helm.elastic.co"
-  chart            = "eck-operator"
-  version          = "2.11.1"
-  namespace        = "elastic-system"
-  create_namespace = true
-
-  depends_on = [kubernetes_namespace.elasticsearch]
-}
-
-# ── Prometheus + Grafana via kube-prometheus-stack ────────────────────────────
-
-resource "helm_release" "kube_prometheus_stack" {
-  name       = "kube-prometheus-stack"
-  repository = "https://prometheus-community.github.io/helm-charts"
-  chart      = "kube-prometheus-stack"
-  version    = "57.2.0"
-  namespace  = var.monitoring_namespace
-
-  values = [
-    file("${path.module}/helm-values/prometheus-stack-values.yml")
-  ]
-
-  depends_on = [kubernetes_namespace.monitoring]
-}
-
-# ── Ingress Controller (nginx) ────────────────────────────────────────────────
+# ── Ingress Controller ────────────────────────────────────────────────────────
 
 resource "helm_release" "ingress_nginx" {
   name             = "ingress-nginx"
@@ -214,19 +135,112 @@ resource "helm_release" "ingress_nginx" {
   depends_on = [kind_cluster.search_cluster]
 }
 
+# ── Prometheus + Grafana ──────────────────────────────────────────────────────
+
+resource "helm_release" "kube_prometheus_stack" {
+  name       = "kube-prometheus-stack"
+  repository = "https://prometheus-community.github.io/helm-charts"
+  chart      = "kube-prometheus-stack"
+  version    = "57.2.0"
+  namespace  = var.monitoring_namespace
+
+  values = [
+    file("${path.module}/helm-values/prometheus-stack-values.yml")
+  ]
+
+  depends_on = [kubernetes_namespace.monitoring]
+}
+
+# ── Elasticsearch external service ────────────────────────────────────────────
+
+resource "kubernetes_service" "elasticsearch" {
+  metadata {
+    name      = "elasticsearch"
+    namespace = "default"
+  }
+  spec {
+    port {
+      port        = 9200
+      target_port = 9200
+    }
+  }
+  depends_on = [kind_cluster.search_cluster]
+}
+
+resource "kubernetes_endpoints" "elasticsearch" {
+  metadata {
+    name      = "elasticsearch"
+    namespace = "default"
+  }
+  subset {
+    address {
+      ip = var.es_host
+    }
+    port {
+      port = 9200
+    }
+  }
+  depends_on = [kind_cluster.search_cluster]
+}
+
+# ── Elasticsearch credentials secret ─────────────────────────────────────────
+
+resource "kubernetes_secret" "elasticsearch_credentials" {
+  metadata {
+    name      = "elasticsearch-credentials"
+    namespace = "default"
+  }
+  data = {
+    password = var.es_password
+  }
+  depends_on = [kind_cluster.search_cluster]
+}
+
+# ── Load images + deploy apps ─────────────────────────────────────────────────
+
+resource "null_resource" "load_images" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      kind load docker-image search-api:latest --name ${var.cluster_name}
+      kind load docker-image search-ui:latest --name ${var.cluster_name}
+    EOT
+  }
+  depends_on = [kind_cluster.search_cluster]
+}
+
+resource "null_resource" "deploy_apps" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      kubectl apply -f ${path.module}/../k8s-configs/apps/ --context kind-${var.cluster_name}
+      kubectl apply -f ${path.module}/../k8s-configs/ingress/search-ingress.yaml --context kind-${var.cluster_name}
+    EOT
+  }
+  depends_on = [
+    null_resource.load_images,
+    helm_release.ingress_nginx,
+    kubernetes_secret.elasticsearch_credentials,
+    kubernetes_endpoints.elasticsearch,
+  ]
+}
+
 # ── Outputs ───────────────────────────────────────────────────────────────────
 
-output "kubeconfig_path" {
-  description = "Path to the kubeconfig for the kind cluster"
-  value       = kind_cluster.search_cluster.kubeconfig_path
-}
-
 output "cluster_name" {
-  description = "Name of the kind cluster"
-  value       = kind_cluster.search_cluster.name
+  value = kind_cluster.search_cluster.name
 }
 
-output "cluster_endpoint" {
-  description = "Kubernetes API endpoint"
-  value       = kind_cluster.search_cluster.endpoint
+output "grafana_url" {
+  value = "http://localhost/grafana"
+}
+
+output "prometheus_note" {
+  value = "kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090"
+}
+
+output "search_ui_url" {
+  value = "http://localhost"
+}
+
+output "search_api_url" {
+  value = "http://localhost/api/v1/search"
 }
