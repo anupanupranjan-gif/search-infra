@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: search-api
-  tag: latest
+  tag: 9685805
   pullPolicy: IfNotPresent
 
 service:
