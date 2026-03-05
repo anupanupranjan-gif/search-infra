@@ -1,7 +1,7 @@
 replicaCount: 2
 
 image:
-  repository: search-api
+  repository: ghcr.io/anupanupranjan-gif/search-api
   tag: 9685805
   pullPolicy: IfNotPresent
 
@@ -11,7 +11,7 @@ service:
   targetPort: 8080
 
 elasticsearch:
-  host: "172.18.0.1"
+  host: "searchx-es-http.elasticsearch.svc.cluster.local"
   port: "9200"
   username: "elastic"
   passwordSecret:
