@@ -37,6 +37,8 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.elasticsearch.passwordSecret.name }}
                   key: {{ .Values.elasticsearch.passwordSecret.key }}
+            - name: ES_SCHEME
+              value: "https"
             - name: ES_SSL_ENABLED
               value: "true"
             - name: ES_SSL_VERIFY
