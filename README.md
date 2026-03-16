@@ -1,118 +1,173 @@
-# Phase 1 - Elasticsearch Local Setup
+# search-infra
 
-Everything you need to get Elasticsearch 8.x + Kibana running locally with the correct index mapping.
+Infrastructure-as-code and Kubernetes configuration for the SearchX platform. Contains Helm charts, ArgoCD app definitions, Kubernetes manifests, Terraform, and a startup script for the full local Kind cluster.
 
-## Prerequisites
+---
 
-- Docker + Docker Compose v2
-- `make` (optional but recommended)
-- Ansible (for index management via playbook)
-- Terraform >= 1.7 + kind (for k8s cluster)
+## What's in Here
 
-## Quick Start (Local Dev)
-
-```bash
-# 1. Copy env file (change passwords if you want)
-cp .env.example .env
-
-# 2. Start Elasticsearch + Kibana
-make up
-# or: docker compose up -d
-
-# 3. Wait ~60s for ES to be healthy, then check
-make es-health
-
-# 4. Open Kibana
-open http://localhost:5601
-# Login: elastic / changeme
+```
+search-infra/
+├── helm-charts/
+│   ├── search-api/                # Helm chart for search-api
+│   │   ├── Chart.yaml
+│   │   ├── values.yaml            # image tag updated by GitHub Actions CI/CD
+│   │   └── templates/
+│   │       ├── deployment.yaml    # 2 replicas, ES env vars, readiness/liveness probes
+│   │       ├── service.yaml
+│   │       ├── hpa.yaml           # Horizontal Pod Autoscaler
+│   │       └── servicemonitor.yaml # Prometheus scrape config
+│   └── search-ui/
+│       ├── Chart.yaml
+│       ├── values.yaml
+│       └── templates/
+│           ├── deployment.yaml
+│           └── service.yaml
+├── k8s-configs/
+│   ├── argocd/                    # ArgoCD app definitions
+│   │   ├── search-api-app.yaml
+│   │   └── search-ui-app.yaml
+│   ├── elasticsearch/             # ECK Elasticsearch and Kibana CRs
+│   │   ├── elasticsearch.yaml     # ECK Elasticsearch cluster (single node, 10Gi PVC)
+│   │   └── kibana.yaml            # ECK Kibana
+│   ├── ingress/                   # Nginx ingress rules
+│   │   ├── search-ingress.yaml    # / → search-ui, /api → search-api
+│   │   ├── kibana-ingress.yaml    # /kibana → Kibana (HTTPS backend)
+│   │   └── argocd-ingress.yaml    # /argocd → ArgoCD server
+│   ├── prometheus-mcp/            # prometheus-mcp deployment and service
+│   │   └── deployment.yaml
+│   └── observability-console/     # observability-console deployment and ingress
+│       ├── deployment.yaml
+│       └── ingress.yaml           # /ops → console, /mcp → prometheus-mcp
+├── terraform/
+│   ├── main.tf                    # Kind cluster, Helm releases (prometheus-stack, nginx-ingress)
+│   └── helm-values/
+│       └── prometheus-stack-values.yml  # Grafana subpath, Prometheus retention
+└── Makefile                       # cluster-create, ingress-install, apps-deploy, load-images
 ```
 
-The `es-setup` container runs automatically and:
-- Sets the `kibana_system` user password
-- Creates the `search_user` role and user (used by Spring Boot)
-- Creates the `products` index with the full mapping
+---
 
-## Index Design Decisions
+## Cluster Overview
 
-### Analyzers
+Everything runs in a single-node Kind cluster on a local Fedora Linux VM (ARM aarch64).
 
-| Analyzer | Used For | What it does |
-|---|---|---|
-| `product_analyzer` | Index-time on title/description | Strips HTML, lowercases, removes stop words, stems, applies synonyms |
-| `product_search_analyzer` | Search-time on title/description | Same as above (synonyms expand at search time) |
-| `autocomplete_index_analyzer` | Index-time on title.autocomplete | Edge ngram (min 2, max 20) for prefix matching |
-| `autocomplete_search_analyzer` | Search-time on title.autocomplete | Standard lowercase only (don't ngram the query) |
-| `brand_analyzer` | Brand field | Keyword tokenizer + lowercase (exact brand matching) |
+| Namespace | What's Running |
+|---|---|
+| `default` | search-api (2 replicas), search-ui, prometheus-mcp, observability-console |
+| `elasticsearch` | ECK operator, Elasticsearch (single node), Kibana |
+| `monitoring` | kube-prometheus-stack (Prometheus, Grafana, Alertmanager) |
+| `argocd` | ArgoCD (7 pods) |
+| `ingress-nginx` | Nginx ingress controller |
+| `elastic-system` | ECK operator |
 
-### Field Design
+---
 
-- `title` has 3 sub-fields: full text (product_analyzer), autocomplete (edge ngram), keyword (for sorting/aggregations)
-- `category` is keyword for faceting + text sub-field for full-text search on category names
-- `price` uses `scaled_float` with scaling factor 100 (stores as integer internally, efficient)
-- `product_vector` is `dense_vector` with 384 dims (all-MiniLM-L6-v2 output), HNSW index for fast kNN
-- `suggest` is a `completion` type with category context (powers the typeahead API)
-- `image_url` has `index: false, doc_values: false` - stored but never searched or aggregated
+## Ingress Routes
 
-### Synonym Handling
+All traffic enters through nginx ingress on port 80:
 
-Synonyms are in `elasticsearch/synonyms.txt`. They're loaded at index creation time. To update synonyms on a live index you need to either:
-- Close/open the index (causes brief downtime)
-- Use the ES Synonyms API (ES 8.10+) for zero-downtime updates - recommended for production
+| Path | Service |
+|---|---|
+| `/` | search-ui |
+| `/api/v1/` | search-api |
+| `/grafana` | Grafana (monitoring namespace) |
+| `/argocd` | ArgoCD server |
+| `/kibana` | Kibana (HTTPS backend, ECK) |
+| `/ops` | observability-console |
+| `/mcp` | prometheus-mcp |
 
-## Running with Ansible
+---
 
-```bash
-# Apply index mapping via Ansible
-make ansible-apply
+## GitOps Flow
 
-# Dry run first
-make ansible-check
+```
+git push to search-api or search-ui
+        │
+        ▼
+GitHub Actions
+  - Build JAR / npm build
+  - Build Docker image
+  - Push to ghcr.io
+  - Update helm-charts/<app>/values.yaml with new image tag
+  - Push to search-infra
+        │
+        ▼
+ArgoCD detects change in search-infra
+  - Renders Helm chart
+  - Applies to Kind cluster
+  - Pods rolling update
 ```
 
-## Running on kind (Kubernetes)
+ArgoCD is configured with auto-sync, self-heal, and auto-prune. It watches the `main` branch of this repo.
+
+---
+
+## Elasticsearch (ECK)
+
+Elasticsearch runs via the Elastic Cloud on Kubernetes (ECK) operator version 2.11.1. Key configuration:
+
+- Single node, version 8.12.2
+- `node.store.allow_mmap: false` (required for Kind)
+- Resources: 1.5Gi request / 2Gi limit, `-Xms1g -Xmx1g`
+- PVC: 10Gi ReadWriteOnce
+- TLS enabled (ECK self-signed cert)
+- Password stored in ECK-generated secret `searchx-es-elastic-user`
+
+In-cluster URL: `https://searchx-es-http.elasticsearch.svc.cluster.local:9200`
+
+---
+
+## Observability Stack
+
+Deployed via `kube-prometheus-stack` Helm chart. Includes:
+
+- **Prometheus** — scrapes search-api via `ServiceMonitor`, retains 15 days
+- **Grafana** — accessible at `http://localhost/grafana` (admin/admin123), subpath configured
+- **Alertmanager** — installed but not configured
+- **prometheus-mcp** — custom Node.js server that wraps Prometheus as AI tool endpoints
+- **observability-console** — standalone React app at `http://localhost/ops`, AI chat powered by Ollama with live Prometheus context
+
+---
+
+## Helm Charts
+
+The Helm charts for `search-api` and `search-ui` are simple single-service charts. The image tag in `values.yaml` is the primary thing that changes — GitHub Actions updates it on every push to trigger ArgoCD deploys.
+
+Note: ArgoCD application specs must not have hardcoded `helm.parameters` overrides for `image.tag`, as these override `values.yaml` and break the CI/CD flow. If you see pods not updating, check:
 
 ```bash
-# Initialize Terraform
-make tf-init
-
-# See what will be created
-make tf-plan
-
-# Create the cluster (takes 3-5 minutes)
-make tf-apply
+kubectl get application <app> -n argocd -o jsonpath='{.spec.source.helm}'
 ```
 
-This creates:
-- 1 control plane + 3 worker nodes
-- ECK (Elastic Cloud on Kubernetes) operator for managing ES
-- kube-prometheus-stack (Prometheus + Grafana + Alertmanager)
-- nginx ingress controller
+---
 
-## Useful Commands
+## Startup
+
+After a VM reboot, run:
 
 ```bash
-make es-health       # Cluster health
-make es-stats        # Doc count + index size
-make es-mapping      # Show current mapping
-make es-test-search  # Test a basic search
-make es-test-fuzzy   # Test fuzzy matching (typo: "televison")
-make logs            # Follow docker compose logs
-make clean           # Remove everything including volumes
+~/searchx-start.sh
 ```
 
-## Credentials
+This checks the Kind cluster, Ollama, ECK Elasticsearch health, and all pod namespaces. It also restarts `argocd-repo-server` if it comes up in `Unknown` state (a known post-reboot issue).
 
-| Service | URL | User | Password |
-|---|---|---|---|
-| Elasticsearch | http://localhost:9200 | elastic | changeme |
-| Kibana | http://localhost:5601 | elastic | changeme |
-| Search App User | - | search_user | search_password_123 |
+---
 
-Change these in `.env` before deploying anywhere beyond your laptop.
+## Terraform
 
-## Next Steps
+The Terraform config in `terraform/` provisions the Kind cluster and installs the prometheus-stack and nginx-ingress Helm releases. It was used for initial cluster setup. The cluster is named `kind` (single control plane node with host port mappings for 80/443).
 
-Once this is running, move to **Phase 2** - the catalog indexer which will:
-1. Download the Amazon Products 2023 dataset from Hugging Face
-2. Generate embeddings using all-MiniLM-L6-v2 via DJL
-3. Bulk index ~117K products into the `products` index
+For day-to-day operations, `kubectl` and `helm` are used directly rather than going through Terraform.
+
+---
+
+## Part of SearchX
+
+This repo contains the infrastructure for:
+
+- [search-api](https://github.com/anupanupranjan-gif/search-api) — Spring Boot hybrid search service
+- [search-ui](https://github.com/anupanupranjan-gif/search-ui) — React eCommerce frontend
+- [search-catalog-indexer](https://github.com/anupanupranjan-gif/search-catalog-indexer) — Product indexing pipeline
+- [prometheus-mcp](https://github.com/anupanupranjan-gif/prometheus-mcp) — Prometheus MCP server
+- [observability-console](https://github.com/anupanupranjan-gif/observability-console) — AI-powered ops console
