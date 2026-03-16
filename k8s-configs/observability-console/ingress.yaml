@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: observability-console
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /ops(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: observability-console
+                port:
+                  number: 80

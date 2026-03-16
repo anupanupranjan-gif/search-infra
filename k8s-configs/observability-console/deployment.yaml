@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: observability-console
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: observability-console
+  template:
+    metadata:
+      labels:
+        app: observability-console
+    spec:
+      containers:
+        - name: observability-console
+          image: observability-console:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: observability-console
+  namespace: default
+spec:
+  selector:
+    app: observability-console
+  ports:
+    - port: 80
+      targetPort: 80
