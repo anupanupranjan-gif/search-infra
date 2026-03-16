@@ -17,3 +17,10 @@ spec:
                 name: observability-console
                 port:
                   number: 80
+          - path: /mcp(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: prometheus-mcp
+                port:
+                  number: 3001
