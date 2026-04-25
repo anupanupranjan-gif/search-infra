@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: indexer-consumer
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: indexer-consumer
+  template:
+    metadata:
+      labels:
+        app: indexer-consumer
+    spec:
+      containers:
+        - name: indexer-consumer
+          image: indexer-consumer:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KAFKA_BROKERS
+              value: "searchx-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092"
+            - name: KAFKA_TOPIC
+              value: "product-events"
+            - name: ES_HOST
+              value: "searchx-es-http.elasticsearch.svc.cluster.local"
+            - name: ES_PORT
+              value: "9200"
+            - name: ES_SCHEME
+              value: "https"
+            - name: ES_SSL_ENABLED
+              value: "true"
+            - name: ES_SSL_VERIFY
+              value: "false"
+            - name: ES_USERNAME
+              value: "elastic"
+            - name: ES_PASSWORD
+              value: "13e4W55sQBo749OVbnF4X4Mq"
+            - name: ES_INDEX
+              value: "products"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
