@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-simulator
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-simulator
+  template:
+    metadata:
+      labels:
+        app: product-simulator
+    spec:
+      containers:
+        - name: product-simulator
+          image: product-simulator:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: KAFKA_BROKERS
+              value: "searchx-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092"
+            - name: KAFKA_TOPIC
+              value: "product-events"
+            - name: INTERVAL_MS
+              value: "3000"
+            - name: BATCH_SIZE
+              value: "1"
+            - name: KAFKAJS_NO_PARTITIONER_WARNING
+              value: "1"
