@@ -43,6 +43,10 @@ spec:
               value: "true"
             - name: ES_SSL_VERIFY
               value: "false"
+            - name: OLLAMA_BASE_URL
+              value: "http://172.18.0.1:11434"
+            - name: OLLAMA_MODEL
+              value: "gemma3:1b"
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           readinessProbe:
