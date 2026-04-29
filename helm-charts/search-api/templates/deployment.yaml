@@ -47,6 +47,8 @@ spec:
               value: "http://172.18.0.1:11434"
             - name: OLLAMA_MODEL
               value: "gemma3:1b"
+            - name: REDIS_HOST
+              value: "redis-master.default.svc.cluster.local"
             - name: OLLAMA_TIMEOUT
               value: "30"
           resources:

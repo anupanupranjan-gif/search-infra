@@ -2,7 +2,7 @@ replicaCount: 2
 
 image:
   repository: search-api
-  tag: 4cb599a
+  tag: f647d0d
   pullPolicy: IfNotPresent
 
 service:
