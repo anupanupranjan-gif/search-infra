@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: search-ui
-  tag: 1d469df
+  tag: 47e1d20
   pullPolicy: IfNotPresent
 
 service:
