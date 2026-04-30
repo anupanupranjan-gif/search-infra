@@ -15,7 +15,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: search-api
+                name: kong-proxy-bridge
                 port:
                   number: 80
           - path: /actuator
