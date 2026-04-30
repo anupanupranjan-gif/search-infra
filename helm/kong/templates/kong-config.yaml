@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-declarative-config
+  namespace: kong
+data:
+  kong.yaml: |
+    _format_version: "3.0"
+    _transform: true
+
+    services:
+      - name: search-api
+        url: http://search-api.default.svc.cluster.local:8080
+        routes:
+          - name: search-route
+            paths:
+              - /api/v1
+
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 60
+          hour: 1000
+          policy: local
+      - name: key-auth
+        config:
+          key_names:
+            - X-API-Key
+
+    consumers:
+      - username: searchx-internal
+        keyauth_credentials:
+          - key: searchx-dev-key-2026
+      - username: external-client
+        keyauth_credentials:
+          - key: ext-client-key-change-me

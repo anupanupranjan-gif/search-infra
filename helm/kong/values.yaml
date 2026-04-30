@@ -1,0 +1,25 @@
+image:
+  repository: kong
+  tag: "3.6"
+
+env:
+  database: "off"
+  declarative_config: /kong/declarative/kong.yaml
+
+ingressController:
+  enabled: false
+
+proxy:
+  enabled: true
+  type: ClusterIP
+
+admin:
+  enabled: true
+  type: ClusterIP
+  http:
+    enabled: true
+    containerPort: 8001
+    servicePort: 8001
+
+dblessConfig:
+  configMap: kong-declarative-config
