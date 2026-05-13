@@ -1,0 +1,67 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: searchx-slo-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: searchx.slo
+      interval: 30s
+      rules:
+        - alert: SearchLatencyP95Breached
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(search_latency_seconds_bucket{application="search-api"}[5m])) by (le)
+            ) > 0.5
+          for: 2m
+          labels:
+            severity: warning
+            team: search
+          annotations:
+            summary: "Search p95 latency breached 500ms SLO"
+            description: "p95 latency is {{ $value | humanizeDuration }} — SLO is 500ms"
+
+        - alert: SearchLatencyP99Critical
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(search_latency_seconds_bucket{application="search-api"}[5m])) by (le)
+            ) > 1.0
+          for: 2m
+          labels:
+            severity: critical
+            team: search
+          annotations:
+            summary: "Search p99 latency exceeded 1s"
+            description: "p99 latency is {{ $value | humanizeDuration }} — critical threshold breached"
+
+        - alert: SearchAvailabilitySLOBreached
+          expr: |
+            (
+              sum(rate(http_server_requests_seconds_count{application="search-api", outcome="SUCCESS"}[5m]))
+              /
+              sum(rate(http_server_requests_seconds_count{application="search-api"}[5m]))
+            ) < 0.99
+          for: 2m
+          labels:
+            severity: critical
+            team: search
+          annotations:
+            summary: "Search availability dropped below 99% SLO"
+            description: "Availability is {{ $value | humanizePercentage }} — SLO is 99%"
+
+        - alert: SearchErrorBudgetBurnRateFast
+          expr: |
+            (
+              sum(rate(http_server_requests_seconds_count{application="search-api", outcome!="SUCCESS"}[1h]))
+              /
+              sum(rate(http_server_requests_seconds_count{application="search-api"}[1h]))
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+            team: search
+          annotations:
+            summary: "Search error budget burning fast"
+            description: "Error rate is {{ $value | humanizePercentage }} over last 1h — budget burning at high rate"
