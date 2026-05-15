@@ -1,7 +1,7 @@
 replicaCount: 1
 
 image:
-  repository: search-api
+  repository: ghcr.io/anupanupranjan-gif/search-api
   tag: latest
   pullPolicy: IfNotPresent
 
