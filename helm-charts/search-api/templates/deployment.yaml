@@ -51,6 +51,9 @@ spec:
               value: "redis-master.default.svc.cluster.local"
             - name: OLLAMA_TIMEOUT
               value: "30"
+          volumeMounts:
+            - name: djl-cache
+              mountPath: /root/.djl.ai
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           readinessProbe:
@@ -65,3 +68,7 @@ spec:
               port: 8080
             initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+      volumes:
+        - name: djl-cache
+          persistentVolumeClaim:
+            claimName: djl-model-cache
