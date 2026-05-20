@@ -12,7 +12,13 @@ check_http() {
   local name=$1
   local url=$2
   local expected=$3
-  local code=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 "$url" 2>/dev/null)
+  local header=${4:-""}
+  local code
+  if [ -n "$header" ]; then
+    code=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 -H "$header" "$url" 2>/dev/null)
+  else
+    code=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 5 "$url" 2>/dev/null)
+  fi
   if [ "$code" == "$expected" ]; then
     echo -e "${GREEN}  OK${NC}     $name ($code) — $url"
   else
@@ -35,14 +41,14 @@ check_pod_namespace() {
 
 echo -e "${YELLOW}--- HTTP Endpoints ---${NC}"
 check_http "SearchX UI"          "http://localhost"                        "200"
-check_http "Search API"          "http://localhost/api/v1/search?q=test"  "200"
+check_http "Search API"          "http://localhost/api/v1/search?q=test"  "200" "X-API-Key: searchx-dev-key-2026"
 check_http "Grafana"             "http://localhost/grafana"                "200"
 check_http "ArgoCD"              "http://localhost/argocd"                 "200"
 check_http "Prometheus"          "http://localhost/prometheus/graph"       "200"
 check_http "NexaRank UI"         "http://localhost/nexarank-ui/"           "200"
 check_http "NexaRank API"        "http://localhost/nexarank/api/v1/rules"  "403"
 check_http "Observability"       "http://localhost/ops"                    "200"
-check_http "Kibana"              "https://localhost:5601/kibana"           "302"
+echo -e "${YELLOW}  SKIP${NC}   Kibana — start manually: kubectl port-forward svc/searchx-kb-http 5601:5601 -n elasticsearch &"
 
 echo ""
 echo -e "${YELLOW}--- Pod Health ---${NC}"
