@@ -2,8 +2,8 @@ replicaCount: 1
 
 image:
   repository: search-ui
-  tag: 1936d61
-  pullPolicy: IfNotPresent
+tag: latest
+  pullPolicy: Always
 
 service:
   type: ClusterIP
