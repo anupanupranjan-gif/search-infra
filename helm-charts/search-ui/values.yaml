@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: search-ui
-tag: latest
+tag: aee6097
   pullPolicy: Always
 
 service:
