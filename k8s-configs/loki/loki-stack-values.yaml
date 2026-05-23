@@ -1,0 +1,9 @@
+USER-SUPPLIED VALUES:
+grafana:
+  enabled: false
+loki:
+  enabled: true
+prometheus:
+  enabled: false
+promtail:
+  enabled: true

@@ -12,6 +12,10 @@ if ! kubectl get nodes &>/dev/null; then
   exit 1
 fi
 echo -e "${GREEN}Kind cluster: Ready${NC}"
+# STEP 1.5: Fix inotify limits for Promtail
+sudo sysctl -w fs.inotify.max_user_instances=512 2>/dev/null || true
+sudo sysctl -w fs.inotify.max_user_watches=524288 2>/dev/null || true
+
 # STEP 2: Ollama
 echo -e "\n${YELLOW}[2/5] Checking Ollama...${NC}"
 if ! systemctl is-active --quiet ollama; then
