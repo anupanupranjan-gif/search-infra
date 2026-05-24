@@ -7,7 +7,6 @@ data:
   kong.yaml: |
     _format_version: "3.0"
     _transform: true
-
     services:
       - name: search-api
         url: http://search-api.default.svc.cluster.local:8080
@@ -15,7 +14,12 @@ data:
           - name: search-route
             paths:
               - /api/v1
-
+          - name: click-route
+            paths:
+              - /api/v1/click
+            plugins:
+              - name: key-auth
+                enabled: false
     plugins:
       - name: rate-limiting
         config:
@@ -26,7 +30,6 @@ data:
         config:
           key_names:
             - X-API-Key
-
     consumers:
       - username: searchx-internal
         keyauth_credentials:
