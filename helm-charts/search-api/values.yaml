@@ -2,7 +2,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/anupanupranjan-gif/search-api
-  tag: a574851
+  tag: 24a963b
   pullPolicy: Always
 
 service:
