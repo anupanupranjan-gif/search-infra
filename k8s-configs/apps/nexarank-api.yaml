@@ -24,12 +24,20 @@ spec:
             - name: ES_URI
               value: "https://searchx-es-http.elasticsearch.svc.cluster.local:9200"
             - name: ES_USERNAME
-              value: "elastic"
+              valueFrom:
+                secretKeyRef:
+                  name: nexarank-credentials
+                  key: es-username
             - name: ES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: elasticsearch-credentials
                   key: password
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: nexarank-credentials
+                  key: jwt-secret
           resources:
             requests:
               memory: "512Mi"
