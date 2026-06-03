@@ -43,3 +43,7 @@ autoscaling:
 ollama:
   baseUrl: "http://172.18.0.1:11434"
   model: "gemma3:1b"
+nexarank:
+  baseUrl: "http://nexarank-api.default.svc.cluster.local"
+  enabled: "true"
+  cacheTtlSeconds: "30"

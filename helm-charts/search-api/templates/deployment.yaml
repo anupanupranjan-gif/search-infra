@@ -30,6 +30,12 @@ spec:
               value: {{ .Values.elasticsearch.host | quote }}
             - name: ES_PORT
               value: {{ .Values.elasticsearch.port | quote }}
+            - name: NEXARANK_BASE_URL
+              value: {{ .Values.nexarank.baseUrl | quote }}
+            - name: NEXARANK_ENABLED
+              value: {{ .Values.nexarank.enabled | quote }}
+            - name: NEXARANK_CACHE_TTL
+              value: {{ .Values.nexarank.cacheTtlSeconds | quote }}
             - name: ES_USERNAME
               value: {{ .Values.elasticsearch.username | quote }}
             - name: ES_PASSWORD
