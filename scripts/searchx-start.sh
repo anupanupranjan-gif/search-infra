@@ -94,20 +94,41 @@ for i in $(seq 1 10); do
   echo "  Waiting for search-api... ($i/10)"
   sleep 3
 done
+# STEP 6.5: PostgreSQL port-forward for NexaRank DB work
+echo -e "\n${YELLOW}[6.5/7] Starting PostgreSQL port-forward...${NC}"
+pkill -f "kubectl port-forward.*nexarank-postgres" 2>/dev/null || true
+kubectl port-forward -n default svc/nexarank-postgres-postgresql 5432:5432 &>/dev/null &
+sleep 2
+echo -e "${GREEN}PostgreSQL port-forward: Ready${NC}"
+
 # Summary
 echo -e "\n${GREEN}=== SearchX is Ready ===${NC}"
 echo ""
+echo "  === From VM (localhost) ==="
 echo "  Search UI      → http://localhost"
-echo "  Search API     → http://localhost/api/v1/search?q=headphones"
+echo "  NexaRank UI    → http://localhost/nexarank         (admin/admin123)"
 echo "  Grafana        → http://localhost/grafana          (admin/admin123)"
 echo "  ArgoCD         → http://localhost/argocd           (admin/O6U3kGNcFDY7-0ib)"
 echo "  Kibana         → https://localhost:5601            (elastic/<ES_PASSWORD>)"
 echo "  Prometheus     → http://localhost/prometheus/graph"
 echo "  Observability  → http://localhost/ops"
-echo "  NexaRank UI    → http://localhost/nexarank         (admin/admin123)"
-  echo "  NexaRank API   → http://localhost/nexarank/api/v1"
-  echo "  Click Intel    → http://localhost/nexarank/api/v1/click-intelligence/summary"
-  echo "  Search Quality → http://localhost/nexarank/api/v1/search-quality"
+echo ""
+echo "  === From Mac (VirtualBox NAT port forwarding) ==="
+echo "  Search UI      → http://localhost:8080"
+echo "  NexaRank UI    → http://localhost:8080/nexarank    (admin/admin123)"
+echo "  NexaRank API   → http://localhost:8080/nexarank/api/v1"
+echo "  Search API     → http://localhost:8080/api/v1/search?q=headphones"
+echo "  Grafana        → http://localhost:8080/grafana     (admin/admin123)"
+echo "  ArgoCD         → http://localhost:8080/argocd      (admin/O6UkGNcFDY7-0ib)"
+echo "  Kibana         → https://localhost:5601/kibana     (elastic/<ES_PASSWORD>)"
+echo "  Prometheus     → http://localhost:8080/prometheus/graph"
+echo "  Observability  → http://localhost:8080/ops"
+echo "  SSH            → ssh -p 2222 oracle@127.0.0.1"
+echo ""
+echo "  === VirtualBox NAT Rules Required ==="
+echo "  SSH:    Host 2222 → Guest 22"
+echo "  Web:    Host 8080 → Guest 80"
+echo "  Kibana: Host 5601 → Guest 5601"
 echo ""
 kubectl top nodes 2>/dev/null || echo "  Metrics server warming up..."
 echo ""
