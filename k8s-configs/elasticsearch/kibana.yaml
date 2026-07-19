@@ -8,10 +8,22 @@ spec:
   count: 1
   elasticsearchRef:
     name: searchx
+  config:
+    server.basePath: /kibana
+    server.rewriteBasePath: true
+    server.ssl.enabled: false
   podTemplate:
     spec:
       containers:
         - name: kibana
+          readinessProbe:
+            httpGet:
+              path: /kibana/login
+              port: 5601
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 10
           resources:
             requests:
               memory: 512Mi
