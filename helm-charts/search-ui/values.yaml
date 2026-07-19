@@ -1,7 +1,7 @@
 replicaCount: 1
 image:
   repository: search-ui
-  tag: 523870a
+  tag: b23122c
   pullPolicy: IfNotPresent
 service:
   type: ClusterIP
