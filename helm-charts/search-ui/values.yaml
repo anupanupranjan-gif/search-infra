@@ -1,8 +1,8 @@
 replicaCount: 1
 image:
-  repository: search-ui
-  tag: 6bd5940
-  pullPolicy: IfNotPresent
+  repository: ghcr.io/anupanupranjan-gif/search-ui
+  tag: "6bd5940"
+  pullPolicy: Always
 service:
   type: ClusterIP
   port: 80
