@@ -1,7 +1,7 @@
 replicaCount: 1
 image:
   repository: ghcr.io/anupanupranjan-gif/search-ui
-  tag: "6bd5940"
+  tag: 1fd6599
   pullPolicy: Always
 service:
   type: ClusterIP
