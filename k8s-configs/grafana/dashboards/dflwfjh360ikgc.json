@@ -1,16 +1,15 @@
 {
-  "title": "Error Correlation",
-  "uid": "error-correlation",
+  "title": "Latency Trend",
+  "uid": "dflwfjh360ikgc",
   "tags": [
     "searchx",
-    "logs",
-    "errors"
+    "slo"
   ],
   "timezone": "browser",
   "schemaVersion": 39,
   "version": 1,
   "time": {
-    "from": "now-3h",
+    "from": "now-6h",
     "to": "now"
   },
   "templating": {
@@ -21,13 +20,6 @@
         "query": "prometheus",
         "hide": 0,
         "current": {}
-      },
-      {
-        "name": "DS_LOKI",
-        "type": "datasource",
-        "query": "loki",
-        "hide": 0,
-        "current": {}
       }
     ]
   },
@@ -35,7 +27,7 @@
     {
       "id": 1,
       "type": "timeseries",
-      "title": "Search Latency p95 / p99",
+      "title": "Search Latency p95 / p99 / avg",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -43,7 +35,7 @@
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 12,
+        "w": 24,
         "h": 12
       },
       "fieldConfig": {
@@ -61,33 +53,11 @@
           "expr": "histogram_quantile(0.99, sum(rate(search_latency_seconds_bucket{application=\"search-api\"}[5m])) by (le))",
           "refId": "B",
           "legendFormat": "p99"
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "type": "logs",
-      "title": "Error / exception log stream",
-      "datasource": {
-        "type": "loki",
-        "uid": "${DS_LOKI}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 0,
-        "w": 12,
-        "h": 12
-      },
-      "options": {
-        "showTime": true,
-        "showLabels": true,
-        "wrapLogMessage": true,
-        "sortOrder": "Descending"
-      },
-      "targets": [
+        },
         {
-          "expr": "{namespace=\"default\"} |~ \"(?i)error|exception\"",
-          "refId": "A"
+          "expr": "sum(rate(search_latency_seconds_sum{application=\"search-api\"}[5m])) / sum(rate(search_latency_seconds_count{application=\"search-api\"}[5m]))",
+          "refId": "C",
+          "legendFormat": "avg"
         }
       ]
     }

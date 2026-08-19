@@ -1,60 +1,76 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-dashboard-log-explorer
+  name: grafana-dashboard-aflwf7637afi8c
   namespace: monitoring
   labels:
     grafana_dashboard: "1"
 data:
-  log-explorer.json: |
+  aflwf7637afi8c.json: |
     {
-      "title": "Log Explorer",
-      "uid": "log-explorer",
-      "tags": ["searchx", "logs"],
+      "title": "Success Rate",
+      "uid": "aflwf7637afi8c",
+      "tags": [
+        "searchx",
+        "slo"
+      ],
       "timezone": "browser",
       "schemaVersion": 39,
       "version": 1,
-      "time": { "from": "now-1h", "to": "now" },
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
       "templating": {
         "list": [
           {
-            "name": "app",
-            "type": "query",
-            "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-            "query": "label_values(app)",
-            "refresh": 2,
-            "includeAll": true,
-            "multi": false,
-            "current": { "text": "All", "value": "$__all" }
+            "name": "DS_PROMETHEUS",
+            "type": "datasource",
+            "query": "prometheus",
+            "hide": 0,
+            "current": {}
           }
         ]
       },
       "panels": [
         {
           "id": 1,
-          "type": "text",
-          "title": "",
-          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 2 },
-          "options": {
-            "mode": "html",
-            "content": "<div style=\"display:flex;align-items:center;height:100%;font-size:14px;\">📊 Open the <a href=\"/ops\" target=\"_blank\" style=\"color:#7cd3fd;margin-left:6px;\">Observability Console</a> for live metric cards, throughput sparkline, and Prometheus-context AI chat.</div>"
-          }
-        },
-        {
-          "id": 2,
-          "type": "logs",
-          "title": "Live logs${app:text}",
-          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-          "gridPos": { "x": 0, "y": 2, "w": 24, "h": 20 },
-          "options": {
-            "showTime": true,
-            "showLabels": true,
-            "wrapLogMessage": true,
-            "sortOrder": "Descending"
+          "type": "stat",
+          "title": "Success Rate SLO (>= 99%)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 10
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 98
+                  },
+                  {
+                    "color": "green",
+                    "value": 99
+                  }
+                ]
+              }
+            }
           },
           "targets": [
             {
-              "expr": "{namespace=\"default\", app=~\"$app\"}",
+              "expr": "100 * sum(rate(http_server_requests_seconds_count{application=\"search-api\",uri=\"/api/v1/search\",outcome!=\"SERVER_ERROR\"}[5m])) / sum(rate(http_server_requests_seconds_count{application=\"search-api\",uri=\"/api/v1/search\"}[5m]))",
               "refId": "A"
             }
           ]
@@ -65,42 +81,244 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-dashboard-nexarank-audit-log
+  name: grafana-dashboard-bflwfbcrz9xc0c
   namespace: monitoring
   labels:
     grafana_dashboard: "1"
 data:
-  nexarank-audit-log.json: |
+  bflwfbcrz9xc0c.json: |
     {
-      "title": "NexaRank Audit Log",
-      "uid": "nexarank-audit-log",
-      "tags": ["searchx", "logs", "audit"],
+      "title": "Request Rate",
+      "uid": "bflwfbcrz9xc0c",
+      "tags": [
+        "searchx",
+        "slo"
+      ],
       "timezone": "browser",
       "schemaVersion": 39,
       "version": 1,
-      "time": { "from": "now-6h", "to": "now" },
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "DS_PROMETHEUS",
+            "type": "datasource",
+            "query": "prometheus",
+            "hide": 0,
+            "current": {}
+          }
+        ]
+      },
       "panels": [
         {
           "id": 1,
           "type": "timeseries",
-          "title": "Audit events per minute",
-          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
+          "title": "Requests/sec",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 10
+          },
           "targets": [
             {
-              "expr": "sum(count_over_time({app=\"nexarank-api\"} |= \"AUDIT\" [1m]))",
+              "expr": "sum(rate(http_server_requests_seconds_count{application=\"search-api\",uri=\"/api/v1/search\"}[1m]))",
               "refId": "A",
-              "legendFormat": "audit events/min"
+              "legendFormat": "req/s"
+            }
+          ]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-bfmz27u5hfy80c
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  bfmz27u5hfy80c.json: |
+    {
+      "title": "Zero Results Queries",
+      "uid": "bfmz27u5hfy80c",
+      "tags": [
+        "searchx",
+        "search-quality"
+      ],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "time": {
+        "from": "now-7d",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "DS_POSTGRES",
+            "type": "datasource",
+            "query": "postgres",
+            "hide": 0,
+            "current": {}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "stat",
+          "title": "Zero-result queries (range)",
+          "datasource": {
+            "type": "postgres",
+            "uid": "${DS_POSTGRES}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 6,
+            "h": 6
+          },
+          "targets": [
+            {
+              "rawSql": "SELECT count(*) AS value FROM zero_result_queries WHERE occurred_at BETWEEN $__timeFrom() AND $__timeTo()",
+              "format": "table",
+              "refId": "A"
             }
           ]
         },
         {
           "id": 2,
+          "type": "stat",
+          "title": "Recovery rate",
+          "description": "% of zero-result queries where ZERO_RESULT_RECOVERY (NR-59) found a real suggested query. Requires the stage enabled (defaults OFF, V47).",
+          "datasource": {
+            "type": "postgres",
+            "uid": "${DS_POSTGRES}"
+          },
+          "gridPos": {
+            "x": 6,
+            "y": 0,
+            "w": 6,
+            "h": 6
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent"
+            }
+          },
+          "targets": [
+            {
+              "rawSql": "SELECT round(100.0 * sum(case when recovered then 1 else 0 end) / nullif(count(*),0), 1) AS value FROM zero_result_queries WHERE occurred_at BETWEEN $__timeFrom() AND $__timeTo()",
+              "format": "table",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "Zero-result queries over time",
+          "datasource": {
+            "type": "postgres",
+            "uid": "${DS_POSTGRES}"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 0,
+            "w": 12,
+            "h": 6
+          },
+          "targets": [
+            {
+              "rawSql": "SELECT $__timeGroup(occurred_at, '1h') AS time, count(*) AS \"zero_results\" FROM zero_result_queries WHERE $__timeFilter(occurred_at) GROUP BY 1 ORDER BY 1",
+              "format": "time_series",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "table",
+          "title": "Top zero-result queries",
+          "datasource": {
+            "type": "postgres",
+            "uid": "${DS_POSTGRES}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 6,
+            "w": 24,
+            "h": 12
+          },
+          "targets": [
+            {
+              "rawSql": "SELECT query, count(*) AS occurrences, sum(case when recovered then 1 else 0 end) AS recovered_count FROM zero_result_queries WHERE $__timeFilter(occurred_at) GROUP BY query ORDER BY occurrences DESC LIMIT 20",
+              "format": "table",
+              "refId": "A"
+            }
+          ]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-cfmw87wgh5340d
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  cfmw87wgh5340d.json: |
+    {
+      "title": "Search Operations Log Explorer",
+      "uid": "cfmw87wgh5340d",
+      "tags": [
+        "searchx",
+        "logs"
+      ],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "DS_LOKI",
+            "type": "datasource",
+            "query": "loki",
+            "hide": 0,
+            "current": {}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
           "type": "logs",
-          "title": "AUDIT log lines (com.nexarank.api.service.AuditService)",
-          "description": "Filters nexarank-api pod logs for the literal 'AUDIT' prefix AuditService.recordAction()/recordTier1Action() emit on every rule/user/tenant mutation.",
-          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-          "gridPos": { "x": 0, "y": 8, "w": 24, "h": 16 },
+          "title": "Live logs (search-api)",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 8
+          },
           "options": {
             "showTime": true,
             "wrapLogMessage": true,
@@ -108,8 +326,488 @@ data:
           },
           "targets": [
             {
-              "expr": "{app=\"nexarank-api\"} |= \"AUDIT\"",
+              "expr": "{namespace=\"default\", app=\"search-api\"}",
               "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "logs",
+          "title": "Search queries",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 8,
+            "w": 24,
+            "h": 6
+          },
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending"
+          },
+          "targets": [
+            {
+              "expr": "{namespace=\"default\", app=\"search-api\"} |= \"Search [\"",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "logs",
+          "title": "NexaRank rules applied",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 14,
+            "w": 24,
+            "h": 6
+          },
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending"
+          },
+          "targets": [
+            {
+              "expr": "{namespace=\"default\", app=\"search-api\"} |= \"NexaRank\"",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "logs",
+          "title": "Errors",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 20,
+            "w": 24,
+            "h": 6
+          },
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending"
+          },
+          "targets": [
+            {
+              "expr": "{namespace=\"default\", app=\"search-api\"} |= \"ERROR\"",
+              "refId": "A"
+            }
+          ]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dfg5mznzlenlsc
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dfg5mznzlenlsc.json: |
+    {
+      "title": "SearchX SLO Dashboard",
+      "uid": "dfg5mznzlenlsc",
+      "tags": [
+        "searchx",
+        "slo"
+      ],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "DS_PROMETHEUS",
+            "type": "datasource",
+            "query": "prometheus",
+            "hide": 0,
+            "current": {}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 99,
+          "type": "text",
+          "title": "",
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 2
+          },
+          "options": {
+            "mode": "html",
+            "content": "<div style=\"display:flex;align-items:center;height:100%;font-size:14px;\">\ud83d\udcca Open the <a href=\"/ops\" target=\"_blank\" style=\"color:#7cd3fd;margin-left:6px;\">Observability Console</a> for live metric cards, throughput sparkline, and Prometheus-context AI chat.</div>"
+          }
+        },
+        {
+          "id": 1,
+          "type": "gauge",
+          "title": "Availability SLO (28 Day Rolling)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 2,
+            "w": 6,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 98
+                  },
+                  {
+                    "color": "green",
+                    "value": 99
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "100 * sum(increase(http_server_requests_seconds_count{application=\"search-api\",uri=\"/api/v1/search\",outcome!=\"SERVER_ERROR\"}[28d])) / sum(increase(http_server_requests_seconds_count{application=\"search-api\",uri=\"/api/v1/search\"}[28d]))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "Success Rate SLO (>= 99%)",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 6,
+            "y": 2,
+            "w": 6,
+            "h": 4
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 98
+                  },
+                  {
+                    "color": "green",
+                    "value": 99
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "100 * sum(rate(http_server_requests_seconds_count{application=\"search-api\",uri=\"/api/v1/search\",outcome!=\"SERVER_ERROR\"}[5m])) / sum(rate(http_server_requests_seconds_count{application=\"search-api\",uri=\"/api/v1/search\"}[5m]))",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "Max Latency",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 6,
+            "y": 6,
+            "w": 6,
+            "h": 4
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            }
+          },
+          "targets": [
+            {
+              "expr": "search_latency_seconds_max{application=\"search-api\"}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Search Latency p95 and p99",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 2,
+            "w": 12,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": {
+                "thresholdsStyle": {
+                  "mode": "line"
+                }
+              },
+              "thresholds": {
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 0.5
+                  }
+                ]
+              }
+            }
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(search_latency_seconds_bucket{application=\"search-api\"}[5m])) by (le))",
+              "refId": "A",
+              "legendFormat": "p95"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(search_latency_seconds_bucket{application=\"search-api\"}[5m])) by (le))",
+              "refId": "B",
+              "legendFormat": "p99"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "type": "timeseries",
+          "title": "Requests/sec",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 10,
+            "w": 12,
+            "h": 8
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_requests_seconds_count{application=\"search-api\",uri=\"/api/v1/search\"}[1m]))",
+              "refId": "A",
+              "legendFormat": "req/s"
+            }
+          ]
+        },
+        {
+          "id": 6,
+          "type": "timeseries",
+          "title": "Avg Latency over time",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 10,
+            "w": 12,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            }
+          },
+          "targets": [
+            {
+              "expr": "sum(rate(search_latency_seconds_sum{application=\"search-api\"}[5m])) / sum(rate(search_latency_seconds_count{application=\"search-api\"}[5m]))",
+              "refId": "A",
+              "legendFormat": "avg latency"
+            }
+          ]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dflwetp8jb7y8b
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dflwetp8jb7y8b.json: |
+    {
+      "title": "Max Latency",
+      "uid": "dflwetp8jb7y8b",
+      "tags": [
+        "searchx",
+        "slo"
+      ],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "DS_PROMETHEUS",
+            "type": "datasource",
+            "query": "prometheus",
+            "hide": 0,
+            "current": {}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "stat",
+          "title": "Max Latency",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 10
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            }
+          },
+          "targets": [
+            {
+              "expr": "search_latency_seconds_max{application=\"search-api\"}",
+              "refId": "A"
+            }
+          ]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-dflwfjh360ikgc
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  dflwfjh360ikgc.json: |
+    {
+      "title": "Latency Trend",
+      "uid": "dflwfjh360ikgc",
+      "tags": [
+        "searchx",
+        "slo"
+      ],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "DS_PROMETHEUS",
+            "type": "datasource",
+            "query": "prometheus",
+            "hide": 0,
+            "current": {}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Search Latency p95 / p99 / avg",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 12
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            }
+          },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(search_latency_seconds_bucket{application=\"search-api\"}[5m])) by (le))",
+              "refId": "A",
+              "legendFormat": "p95"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(search_latency_seconds_bucket{application=\"search-api\"}[5m])) by (le))",
+              "refId": "B",
+              "legendFormat": "p99"
+            },
+            {
+              "expr": "sum(rate(search_latency_seconds_sum{application=\"search-api\"}[5m])) / sum(rate(search_latency_seconds_count{application=\"search-api\"}[5m]))",
+              "refId": "C",
+              "legendFormat": "avg"
             }
           ]
         }
@@ -128,33 +826,83 @@ data:
     {
       "title": "Error Correlation",
       "uid": "error-correlation",
-      "tags": ["searchx", "logs", "errors"],
+      "tags": [
+        "searchx",
+        "logs",
+        "errors"
+      ],
       "timezone": "browser",
       "schemaVersion": 39,
       "version": 1,
-      "time": { "from": "now-3h", "to": "now" },
+      "time": {
+        "from": "now-3h",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "DS_PROMETHEUS",
+            "type": "datasource",
+            "query": "prometheus",
+            "hide": 0,
+            "current": {}
+          },
+          {
+            "name": "DS_LOKI",
+            "type": "datasource",
+            "query": "loki",
+            "hide": 0,
+            "current": {}
+          }
+        ]
+      },
       "panels": [
         {
           "id": 1,
           "type": "timeseries",
-          "title": "Error/exception lines per minute, by service",
-          "description": "One series per app label — spikes lining up across services here is the correlation signal (e.g. nexarank-api errors preceding search-api errors moments later).",
-          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-          "gridPos": { "x": 0, "y": 0, "w": 24, "h": 10 },
+          "title": "Search Latency p95 / p99",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 12,
+            "h": 12
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            }
+          },
           "targets": [
             {
-              "expr": "sum by (app) (count_over_time({namespace=\"default\"} |~ \"(?i)error|exception\" [1m]))",
+              "expr": "histogram_quantile(0.95, sum(rate(search_latency_seconds_bucket{application=\"search-api\"}[5m])) by (le))",
               "refId": "A",
-              "legendFormat": "{{app}}"
+              "legendFormat": "p95"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(search_latency_seconds_bucket{application=\"search-api\"}[5m])) by (le))",
+              "refId": "B",
+              "legendFormat": "p99"
             }
           ]
         },
         {
           "id": 2,
           "type": "logs",
-          "title": "Matching lines across all services",
-          "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
-          "gridPos": { "x": 0, "y": 10, "w": 24, "h": 14 },
+          "title": "Error / exception log stream",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 0,
+            "w": 12,
+            "h": 12
+          },
           "options": {
             "showTime": true,
             "showLabels": true,
@@ -164,85 +912,6 @@ data:
           "targets": [
             {
               "expr": "{namespace=\"default\"} |~ \"(?i)error|exception\"",
-              "refId": "A"
-            }
-          ]
-        }
-      ]
-    }
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: grafana-dashboard-zero-results
-  namespace: monitoring
-  labels:
-    grafana_dashboard: "1"
-data:
-  zero-results.json: |
-    {
-      "title": "Zero Results",
-      "uid": "zero-results",
-      "tags": ["searchx", "search-quality"],
-      "timezone": "browser",
-      "schemaVersion": 39,
-      "version": 1,
-      "time": { "from": "now-7d", "to": "now" },
-      "panels": [
-        {
-          "id": 1,
-          "type": "stat",
-          "title": "Zero-result queries (range)",
-          "datasource": { "type": "postgres", "uid": "nexarank-postgres" },
-          "gridPos": { "x": 0, "y": 0, "w": 6, "h": 6 },
-          "targets": [
-            {
-              "rawSql": "SELECT count(*) AS value FROM zero_result_queries WHERE occurred_at BETWEEN $__timeFrom() AND $__timeTo()",
-              "format": "table",
-              "refId": "A"
-            }
-          ]
-        },
-        {
-          "id": 2,
-          "type": "stat",
-          "title": "Recovery rate",
-          "description": "% of zero-result queries where ZERO_RESULT_RECOVERY (NR-59) found a suggested query that returned real hits. Requires the stage to be enabled — it defaults OFF (V47).",
-          "datasource": { "type": "postgres", "uid": "nexarank-postgres" },
-          "gridPos": { "x": 6, "y": 0, "w": 6, "h": 6 },
-          "fieldConfig": { "defaults": { "unit": "percent" } },
-          "targets": [
-            {
-              "rawSql": "SELECT round(100.0 * sum(case when recovered then 1 else 0 end) / nullif(count(*),0), 1) AS value FROM zero_result_queries WHERE occurred_at BETWEEN $__timeFrom() AND $__timeTo()",
-              "format": "table",
-              "refId": "A"
-            }
-          ]
-        },
-        {
-          "id": 3,
-          "type": "timeseries",
-          "title": "Zero-result queries over time",
-          "datasource": { "type": "postgres", "uid": "nexarank-postgres" },
-          "gridPos": { "x": 12, "y": 0, "w": 12, "h": 6 },
-          "targets": [
-            {
-              "rawSql": "SELECT $__timeGroup(occurred_at, '1h') AS time, count(*) AS \"zero_results\" FROM zero_result_queries WHERE $__timeFilter(occurred_at) GROUP BY 1 ORDER BY 1",
-              "format": "time_series",
-              "refId": "A"
-            }
-          ]
-        },
-        {
-          "id": 4,
-          "type": "table",
-          "title": "Top zero-result queries",
-          "datasource": { "type": "postgres", "uid": "nexarank-postgres" },
-          "gridPos": { "x": 0, "y": 6, "w": 24, "h": 12 },
-          "targets": [
-            {
-              "rawSql": "SELECT query, count(*) AS occurrences, sum(case when recovered then 1 else 0 end) AS recovered_count FROM zero_result_queries WHERE $__timeFilter(occurred_at) GROUP BY query ORDER BY occurrences DESC LIMIT 20",
-              "format": "table",
               "refId": "A"
             }
           ]
