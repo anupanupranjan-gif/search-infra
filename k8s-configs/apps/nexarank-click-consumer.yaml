@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexarank-click-consumer
+  labels:
+    app: nexarank-click-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nexarank-click-consumer
+  template:
+    metadata:
+      labels:
+        app: nexarank-click-consumer
+    spec:
+      containers:
+        - name: nexarank-click-consumer
+          image: nexarank-click-consumer:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 45
+            periodSeconds: 30
