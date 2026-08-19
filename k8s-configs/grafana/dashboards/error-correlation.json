@@ -1,0 +1,45 @@
+{
+  "title": "Error Correlation",
+  "uid": "error-correlation",
+  "tags": ["searchx", "logs", "errors"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-3h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Error/exception lines per minute, by service",
+      "description": "One series per app label — spikes lining up across services here is the correlation signal (e.g. nexarank-api errors preceding search-api errors moments later).",
+      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 10 },
+      "targets": [
+        {
+          "expr": "sum by (app) (count_over_time({namespace=\"default\"} |~ \"(?i)error|exception\" [1m]))",
+          "refId": "A",
+          "legendFormat": "{{app}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "logs",
+      "title": "Matching lines across all services",
+      "datasource": { "type": "loki", "uid": "P8E80F9AEF21F6940" },
+      "gridPos": { "x": 0, "y": 10, "w": 24, "h": 14 },
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "expr": "{namespace=\"default\"} |~ \"(?i)error|exception\"",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

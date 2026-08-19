@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasource-nexarank-postgres
+  namespace: monitoring
+  labels:
+    grafana_datasource: "1"
+data:
+  nexarank-postgres.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: NexaRank Postgres
+        uid: nexarank-postgres
+        type: postgres
+        access: proxy
+        url: nexarank-postgres-postgresql.default.svc.cluster.local:5432
+        database: nexarank
+        user: nexarank
+        isDefault: false
+        editable: false
+        secureJsonData:
+          password: nexarank2026
+        jsonData:
+          sslmode: disable
+          postgresVersion: 1800
+          timescaledb: false

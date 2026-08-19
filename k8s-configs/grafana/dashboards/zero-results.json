@@ -1,0 +1,69 @@
+{
+  "title": "Zero Results",
+  "uid": "zero-results",
+  "tags": ["searchx", "search-quality"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-7d", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Zero-result queries (range)",
+      "datasource": { "type": "postgres", "uid": "nexarank-postgres" },
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 6 },
+      "targets": [
+        {
+          "rawSql": "SELECT count(*) AS value FROM zero_result_queries WHERE occurred_at BETWEEN $__timeFrom() AND $__timeTo()",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Recovery rate",
+      "description": "% of zero-result queries where ZERO_RESULT_RECOVERY (NR-59) found a suggested query that returned real hits. Requires the stage to be enabled — it defaults OFF (V47).",
+      "datasource": { "type": "postgres", "uid": "nexarank-postgres" },
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 6 },
+      "fieldConfig": { "defaults": { "unit": "percent" } },
+      "targets": [
+        {
+          "rawSql": "SELECT round(100.0 * sum(case when recovered then 1 else 0 end) / nullif(count(*),0), 1) AS value FROM zero_result_queries WHERE occurred_at BETWEEN $__timeFrom() AND $__timeTo()",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Zero-result queries over time",
+      "datasource": { "type": "postgres", "uid": "nexarank-postgres" },
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 6 },
+      "targets": [
+        {
+          "rawSql": "SELECT $__timeGroup(occurred_at, '1h') AS time, count(*) AS \"zero_results\" FROM zero_result_queries WHERE $__timeFilter(occurred_at) GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Top zero-result queries",
+      "datasource": { "type": "postgres", "uid": "nexarank-postgres" },
+      "gridPos": { "x": 0, "y": 6, "w": 24, "h": 12 },
+      "targets": [
+        {
+          "rawSql": "SELECT query, count(*) AS occurrences, sum(case when recovered then 1 else 0 end) AS recovered_count FROM zero_result_queries WHERE $__timeFilter(occurred_at) GROUP BY query ORDER BY occurrences DESC LIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
