@@ -22,9 +22,13 @@ echo -e "${GREEN}Kind cluster: Ready${NC}"
 sudo sysctl -w fs.inotify.max_user_instances=512 2>/dev/null || true
 sudo sysctl -w fs.inotify.max_user_watches=524288 2>/dev/null || true
 # STEP 2: Ollama
+# Installed portably to ~/.local/ollama (tarball, no systemd unit - see
+# CLAUDE.md Open Items) - checked by port, not `systemctl`.
 echo -e "\n${YELLOW}[2/7] Checking Ollama...${NC}"
-if ! systemctl is-active --quiet ollama; then
-  sudo systemctl start ollama
+if ! curl -s --max-time 2 http://localhost:11434/api/tags &>/dev/null; then
+  echo -e "${YELLOW}Ollama not running - starting...${NC}"
+  export LD_LIBRARY_PATH=~/.local/ollama/lib/ollama:$LD_LIBRARY_PATH
+  nohup ~/.local/bin/ollama serve &>/tmp/ollama-serve.log &
   sleep 3
 fi
 if ollama list | grep -q "gemma3:1b"; then
@@ -39,7 +43,7 @@ WARMUP_RESPONSE=$(curl -s --max-time 30 http://localhost:11434/api/generate \
   -d '{"model":"gemma3:1b","prompt":"hello","stream":false}' \
   | grep -o '"done":true' || true)
 if [[ "$WARMUP_RESPONSE" == '"done":true' ]]; then
-  echo -e "${GREEN}Ollama: gemma3:1b warmed up${NC}"
+  echo -e "${GREEN}Ollama: gemma3:1b warmed up (portable install, ~/.local/ollama)${NC}"
 else
   echo -e "${YELLOW}Ollama: warmup timed out or failed — model may be slow on first query${NC}"
 fi
@@ -102,25 +106,28 @@ sleep 2
 echo -e "${GREEN}PostgreSQL port-forward: Ready${NC}"
 
 # Summary
+ARGOCD_PW=$(kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' 2>/dev/null | base64 -d)
 echo -e "\n${GREEN}=== SearchX is Ready ===${NC}"
 echo ""
 echo "  === From VM (localhost) ==="
 echo "  Search UI      → http://localhost"
-echo "  NexaRank UI    → http://localhost/nexarank         (admin/admin123)"
+echo "  NexaRank UI    → http://localhost/nexarank-ui/     (admin/admin123)"
+echo "  NexaRank API   → http://localhost/nexarank/api/v1"
 echo "  Grafana        → http://localhost/grafana          (admin/admin123)"
-echo "  ArgoCD         → http://localhost/argocd           (admin/O6U3kGNcFDY7-0ib)"
+echo "  ArgoCD         → http://localhost/argocd/          (admin/${ARGOCD_PW:-<see argocd-initial-admin-secret>})"
 echo "  Kibana         → https://localhost:5601            (elastic/<ES_PASSWORD>)"
 echo "  Prometheus     → http://localhost/prometheus/graph"
 echo "  Observability  → http://localhost/ops"
 echo ""
-echo "  === From Mac (VirtualBox NAT port forwarding) ==="
+echo "  === From Mac (VirtualBox NAT port forwarding, if configured) ==="
 echo "  Search UI      → http://localhost:8080"
-echo "  NexaRank UI    → http://localhost:8080/nexarank    (admin/admin123)"
+echo "  NexaRank UI    → http://localhost:8080/nexarank-ui/  (admin/admin123)"
 echo "  NexaRank API   → http://localhost:8080/nexarank/api/v1"
 echo "  Search API     → http://localhost:8080/api/v1/search?q=headphones"
-echo "  Grafana        → http://localhost:8080/grafana     (admin/admin123)"
-echo "  ArgoCD         → http://localhost:8080/argocd      (admin/O6UkGNcFDY7-0ib)"
-echo "  Kibana         → https://localhost:5601/kibana     (elastic/<ES_PASSWORD>)"
+echo "  Grafana        → http://localhost:8080/grafana       (admin/admin123)"
+echo "  ArgoCD         → http://localhost:8080/argocd/       (admin/${ARGOCD_PW:-<see argocd-initial-admin-secret>})"
+echo "  Kibana         → https://localhost:5601/kibana       (elastic/<ES_PASSWORD>)"
 echo "  Prometheus     → http://localhost:8080/prometheus/graph"
 echo "  Observability  → http://localhost:8080/ops"
 echo "  SSH            → ssh -p 2222 oracle@127.0.0.1"

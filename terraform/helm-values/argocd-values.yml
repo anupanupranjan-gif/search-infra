@@ -1,0 +1,11 @@
+configs:
+  params:
+    # ArgoCD sits behind plain-HTTP ingress-nginx (nginx.ingress.kubernetes.io/ssl-redirect:
+    # "false" on argocd-ingress) - without this, argocd-server terminates its own TLS and
+    # 307-redirects every request to https, which nginx never forwards to. Discovered
+    # 2026-08-20 via searchx-healthcheck.sh reporting ArgoCD FAIL (307, expected 200).
+    server.insecure: "true"
+    # Without these, argocd-server serves its UI/API assuming it's mounted at "/",
+    # so every asset/API request 404s once it's behind the /argocd ingress path.
+    server.basehref: "/argocd"
+    server.rootpath: "/argocd"
