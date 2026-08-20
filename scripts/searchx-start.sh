@@ -28,7 +28,13 @@ echo -e "\n${YELLOW}[2/7] Checking Ollama...${NC}"
 if ! curl -s --max-time 2 http://localhost:11434/api/tags &>/dev/null; then
   echo -e "${YELLOW}Ollama not running - starting...${NC}"
   export LD_LIBRARY_PATH=~/.local/ollama/lib/ollama:$LD_LIBRARY_PATH
-  nohup ~/.local/bin/ollama serve &>/tmp/ollama-serve.log &
+  # OLLAMA_HOST=0.0.0.0 required: default bind is 127.0.0.1-only, which no pod
+  # (kind gateway 172.18.0.1) can ever reach - LLM Config/AI features silently
+  # fail with "Failed to connect" regardless of what IP is configured there.
+  # setsid+disown (not a bare `&`) so it survives this script's shell exiting.
+  setsid env OLLAMA_HOST=0.0.0.0:11434 LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
+    ~/.local/bin/ollama serve </dev/null &>/tmp/ollama-serve.log &
+  disown
   sleep 3
 fi
 if ollama list | grep -q "gemma3:1b"; then
