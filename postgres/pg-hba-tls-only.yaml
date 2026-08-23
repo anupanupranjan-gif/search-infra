@@ -1,0 +1,19 @@
+# NR-155: Bitnami's postgresql chart defaults tls.enabled=true to requiring
+# client certificates (hostssl ... cert) for remote connections, while still
+# leaving a plaintext "host ... md5" rule active alongside it - so out of
+# the box, TLS was neither enforced (plaintext still worked) nor usable
+# without distributing client certs we don't have. This override keeps the
+# existing password-based auth (md5, same as before TLS was enabled) but
+# requires it over an encrypted connection for anything non-local.
+#
+# Apply with:
+#   helm upgrade nexarank-postgres bitnami/postgresql -n default \
+#     --reuse-values -f search-infra/postgres/pg-hba-tls-only.yaml \
+#     --version 18.8.12
+primary:
+  pgHbaConfiguration: |-
+    local    all             all                                     md5
+    host     all             all        127.0.0.1/32                 md5
+    host     all             all        ::1/128                      md5
+    hostssl  all             all             0.0.0.0/0               md5
+    hostssl  all             all             ::/0                    md5
