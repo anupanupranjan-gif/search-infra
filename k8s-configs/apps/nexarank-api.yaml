@@ -21,6 +21,15 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: DB_URL
+              value: "jdbc:postgresql://nexarank-postgres-postgresql.default.svc.cluster.local:5432/nexarank"
+            - name: DB_USERNAME
+              value: "nexarank"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nexarank-postgres-postgresql
+                  key: password
             - name: ES_URI
               value: "https://searchx-es-http.elasticsearch.svc.cluster.local:9200"
             - name: ES_USERNAME
