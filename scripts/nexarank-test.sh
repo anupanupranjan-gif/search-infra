@@ -208,6 +208,47 @@ else
   fail "Audit log" "no events found: $AUDIT"
 fi
 
+# ── AI SUGGESTIONS ────────────────────────
+section "AI Suggestions"
+
+BOOST_SUGGESTIONS=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/suggestions/boost" -H "Authorization: Bearer ${TOKEN}")
+if [ "$BOOST_SUGGESTIONS" = "200" ]; then
+  pass "Boost suggestions endpoint returns 200"
+else
+  fail "Boost suggestions endpoint" "expected HTTP 200, got $BOOST_SUGGESTIONS"
+fi
+
+WQ_ADD=$(curl -s -X POST "$BASE/suggestions/watched-queries" \
+  -H "Content-Type: application/json" -H "Authorization: Bearer ${TOKEN}" \
+  -d '{"query":"qa-watched-query-test","expectedMinCtr":0.05,"expectedMaxPosition":3}')
+WQ_ID=$(echo "$WQ_ADD" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
+
+if [ -n "$WQ_ID" ]; then
+  pass "Watched query created"
+  # Regression: WatchedQueryService.delete() used a derived JPA delete
+  # query with no @Transactional wrapping it, which 500'd unconditionally
+  # (not a permission issue - happened for admin too). See nexarank-api
+  # commit "Fix Watched Queries delete: missing @Transactional".
+  WQ_DEL=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$BASE/suggestions/watched-queries/$WQ_ID" -H "Authorization: Bearer ${TOKEN}")
+  if [ "$WQ_DEL" = "204" ]; then
+    pass "Watched query deleted (regression: used to 500 for everyone)"
+  else
+    fail "Watched query deletion" "expected HTTP 204, got $WQ_DEL"
+  fi
+else
+  fail "Watched query creation" "$WQ_ADD"
+fi
+
+# ── CLICK INTELLIGENCE ────────────────────
+section "Click Intelligence"
+
+CLICK_BOOST=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/click-intelligence/boost-candidates?limit=20" -H "Authorization: Bearer ${TOKEN}")
+if [ "$CLICK_BOOST" = "200" ]; then
+  pass "Click Intelligence boost-candidates endpoint returns 200"
+else
+  fail "Click Intelligence boost-candidates endpoint" "expected HTTP 200, got $CLICK_BOOST"
+fi
+
 # ── TENANT BRANDING ───────────────────────
 section "Tenant Branding"
 
