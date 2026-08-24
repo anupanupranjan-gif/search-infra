@@ -18,8 +18,11 @@ spec:
         - name: nexarank-ui
           image: nexarank-ui:latest
           imagePullPolicy: IfNotPresent
+          env:
+            - name: NEXARANK_API_URL
+              value: "http://nexarank-api"
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           resources:
             requests:
               memory: "64Mi"
@@ -39,5 +42,5 @@ spec:
     - name: http
       protocol: TCP
       port: 80
-      targetPort: 80
+      targetPort: 8080
   type: ClusterIP
