@@ -47,6 +47,11 @@ spec:
                 secretKeyRef:
                   name: nexarank-credentials
                   key: jwt-secret
+            - name: SEARCH_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: nexarank-credentials
+                  key: search-api-key
           resources:
             requests:
               memory: "512Mi"
