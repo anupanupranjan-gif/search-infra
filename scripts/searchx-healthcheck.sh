@@ -39,9 +39,13 @@ check_pod_namespace() {
   fi
 }
 
+# NR-177 follow-up: was hardcoded here — now read from the same k8s Secret
+# nexarank-api's SEARCH_API_KEY env var sources from (NR-175), not a literal.
+SEARCH_API_KEY=$(kubectl get secret nexarank-credentials -n default -o jsonpath='{.data.search-api-key}' 2>/dev/null | base64 -d)
+
 echo -e "${YELLOW}--- HTTP Endpoints ---${NC}"
 check_http "SearchX UI"          "http://localhost"                        "200"
-check_http "Search API"          "http://localhost/api/v1/search?q=test"  "200" "X-API-Key: searchx-dev-key-2026"
+check_http "Search API"          "http://localhost/api/v1/search?q=test"  "200" "X-API-Key: $SEARCH_API_KEY"
 check_http "Grafana"             "http://localhost/grafana"                "200"
 check_http "ArgoCD"              "http://localhost/argocd"                 "200"
 check_http "Prometheus"          "http://localhost/prometheus/graph"       "200"

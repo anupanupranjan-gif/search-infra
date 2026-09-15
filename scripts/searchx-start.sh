@@ -93,10 +93,13 @@ sleep 2
 echo -e "${GREEN}Kibana port-forward: Ready${NC}"
 # STEP 6: Warm up search-api
 echo -e "\n${YELLOW}[6/7] Warming up search-api...${NC}"
+# NR-177 follow-up: was hardcoded here — now read from the same k8s Secret
+# nexarank-api's SEARCH_API_KEY env var sources from (NR-175), not a literal.
+SEARCH_API_KEY=$(kubectl get secret nexarank-credentials -n default -o jsonpath='{.data.search-api-key}' 2>/dev/null | base64 -d) || true
 for i in $(seq 1 10); do
   HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 \
     "http://localhost/api/v1/search?q=test" \
-    -H "X-API-Key: searchx-dev-key-2026" || true)
+    -H "X-API-Key: $SEARCH_API_KEY" || true)
   if [[ "$HTTP_CODE" == "200" ]]; then
     echo -e "${GREEN}search-api: Warmed up (HTTP 200)${NC}"
     break
