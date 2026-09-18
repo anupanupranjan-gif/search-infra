@@ -52,6 +52,11 @@ spec:
                 secretKeyRef:
                   name: nexarank-credentials
                   key: search-api-key
+            - name: INTERNAL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: nexarank-credentials
+                  key: internal-api-key
           resources:
             requests:
               memory: "512Mi"
