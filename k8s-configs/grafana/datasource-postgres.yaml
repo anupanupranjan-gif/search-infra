@@ -21,6 +21,6 @@ data:
         secureJsonData:
           password: nexarank2026
         jsonData:
-          sslmode: disable
+          sslmode: require
           postgresVersion: 1800
           timescaledb: false
